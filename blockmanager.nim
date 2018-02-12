@@ -28,15 +28,6 @@ proc newBlockManager*(): BlockManager =
 proc latestBlock*(manager: BlockManager): Block =
   result = manager.blocks[manager.blocks.len - 1]
 
-proc isValid(blk: Block, prev: Block): bool =
-  if blk.depth - 1 != prev.depth:
-    return false
-  elif blk.previousHash != prev.hash:
-    return false
-  elif calcHash(blk) != blk.hash:
-    return false
-  return true
-
 proc isValid(blks: seq[Block]): bool =
   for i in 1..(blks.len - 1):
     if not isValid(blks[i], blks[i - 1]):

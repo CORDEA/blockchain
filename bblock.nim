@@ -29,7 +29,7 @@ type
 proc getCalcString(depth: int, timestamp: float, data: string, prevHash: string): string =
   result = $depth & $timestamp & data & prevHash
 
-proc calcHash*(blk: Block): string =
+proc calcHash(blk: Block): string =
   result = calcHash(getCalcString(blk.depth, blk.timestamp, blk.data, blk.previousHash))
 
 proc newBlock*(depth: int, data: string, prevHash: string): Block =
@@ -50,3 +50,12 @@ proc getGenesisBlock*(): Block =
     hash: "406D15347591941A9B025DAB641156008A51569731776DA2808F2E3C01D42E17",
     previousHash: "0"
   )
+
+proc isValid*(blk: Block, prev: Block): bool =
+  if blk.depth - 1 != prev.depth:
+    return false
+  elif blk.previousHash != prev.hash:
+    return false
+  elif calcHash(blk) != blk.hash:
+    return false
+  return true
