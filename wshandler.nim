@@ -32,6 +32,10 @@ const
   RequestLatest = "requestlatest"
   ResponseLatest = "responselatest"
 
+proc broadcast*(data: string) =
+  for client in clients:
+    waitFor client.sendText(data, false)
+
 proc requestAll(): string =
   result = $$newMessage(RequestAll, @[])
 
@@ -39,17 +43,13 @@ proc requestLatest*(): string =
   echo "Request all blocks"
   result = $$newMessage(RequestLatest, @[])
 
+proc responseAll(): string =
+  result = $$newMessage(ResponseAll, manager.blocks)
+
 proc responseLatest*(): string =
   echo "Request latest block"
   let latest = manager.latestBlock()
   result = $$newmessage(ResponseLatest, @[latest])
-
-proc responseAll(): string =
-  result = $$newMessage(ResponseAll, manager.blocks)
-
-proc broadcast*(data: string) =
-  for client in clients:
-    waitFor client.sendText(data, false)
 
 proc processResponseLatest(data: seq[Block]) =
   let latest = manager.latestBlock()
