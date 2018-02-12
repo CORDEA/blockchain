@@ -36,13 +36,19 @@ proc initApi() {.async.} =
         else:
           await req.respond(Http200, $$res)
           broadcast(responseLatest())
+      else:
+        await req.respond(Http400, "")
     of "/blocks":
       if req.reqMethod == HttpGet:
         await req.respond(Http200, $$manager.blocks)
+      else:
+        await req.respond(Http400, "")
     of "/peer":
       if req.reqMethod == HttpPost:
         asyncCheck connect(req.body, WsPortNumber)
         await req.respond(Http200, "")
+      else:
+        await req.respond(Http400, "")
   let server = newAsyncHttpServer()
   asyncCheck server.serve(Port(ApiPortNumber), cb)
 
