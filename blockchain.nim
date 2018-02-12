@@ -35,7 +35,7 @@ proc initApi() {.async.} =
           await req.respond(Http400, "")
         else:
           await req.respond(Http200, $$res)
-          broadcast(responseLatest())
+          broadcast(getLatestResponse())
       else:
         await req.respond(Http400, "")
     of "/blocks":

@@ -36,35 +36,35 @@ proc broadcast*(data: string) =
   for client in clients:
     waitFor client.sendText(data, false)
 
-proc requestAll(): string =
+proc getAllRequest(): string =
   result = $$newMessage(RequestAll, @[])
 
-proc requestLatest*(): string =
+proc getLatestRequest*(): string =
   echo "Request all blocks"
   result = $$newMessage(RequestLatest, @[])
 
-proc responseAll(): string =
+proc getAllResponse(): string =
   result = $$newMessage(ResponseAll, manager.blocks)
 
-proc responseLatest*(): string =
+proc getLatestResponse*(): string =
   echo "Request latest block"
   let latest = manager.latestBlock()
   result = $$newmessage(ResponseLatest, @[latest])
 
-proc processResponseLatest(data: seq[Block]) =
+proc onReceivedLatestResponse(data: seq[Block]) =
   let latest = manager.latestBlock()
   if latest.depth < data[0].depth:
     if latest.hash == data[0].previousHash:
       echo "Got the latest block"
       manager.blocks.add(data[0])
     else:
-      broadcast(requestAll())
+      broadcast(getAllRequest())
 
-proc processResponseAll(data: seq[Block]) =
+proc onReceivedAllResponse(data: seq[Block]) =
   manager.replace(data)
 
 proc call(sock: AsyncSocket) {.async.} =
-  await sock.sendText(requestLatest(), false)
+  await sock.sendText(getLatestRequest(), false)
   while true:
     try:
       let f = await sock.readData(false)
@@ -73,16 +73,16 @@ proc call(sock: AsyncSocket) {.async.} =
         case msg.code
         of RequestLatest:
           echo "Received request of latest block"
-          waitFor sock.sendText(responseLatest(), false)
+          waitFor sock.sendText(getLatestResponse(), false)
         of RequestAll:
           echo "Received request of all blocks"
-          waitFor sock.sendText(responseAll(), false)
+          waitFor sock.sendText(getAllResponse(), false)
         of ResponseAll:
           echo "Received all blocks"
-          processResponseAll(msg.blocks)
+          onReceivedAllResponse(msg.blocks)
         of ResponseLatest:
           echo "Received latest block"
-          processResponseLatest(msg.blocks)
+          onReceivedLatestResponse(msg.blocks)
     except:
       echo getCurrentExceptionMsg()
       # clients.delete(req.client)
