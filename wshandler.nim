@@ -21,6 +21,7 @@ import marshal
 import sequtils
 import bblock
 import message
+import messagebuilder
 import blockmanager
 
 var manager* {.threadvar.}: BlockManager
@@ -36,20 +37,21 @@ proc broadcast*(data: string) =
   for client in clients:
     waitFor client.sendText(data, false)
 
-proc getAllRequest(): string =
-  result = $$newMessage(RequestAll, @[])
-
 proc getLatestRequest*(): string =
   echo "Request all blocks"
-  result = $$newMessage(RequestLatest, @[])
-
-proc getAllResponse(): string =
-  result = $$newMessage(ResponseAll, manager.blocks)
+  result = newMessageBuilder()
+    .code(RequestLatest)
+    .build()
+    .toJson()
 
 proc getLatestResponse*(): string =
   echo "Request latest block"
   let latest = manager.latestBlock()
-  result = $$newmessage(ResponseLatest, @[latest])
+  result = newMessageBuilder()
+    .code(ResponseLatest)
+    .blocks(@[latest])
+    .build()
+    .toJson()
 
 proc onReceivedLatestResponse(data: seq[Block]) =
   let latest = manager.latestBlock()
@@ -58,7 +60,12 @@ proc onReceivedLatestResponse(data: seq[Block]) =
       echo "Got the latest block"
       manager.blocks.add(data[0])
     else:
-      broadcast(getAllRequest())
+      broadcast(
+        newMessageBuilder()
+          .code(RequestAll)
+          .build()
+          .toJson()
+      )
 
 proc onReceivedAllResponse(data: seq[Block]) =
   manager.replace(data)
@@ -76,7 +83,12 @@ proc call(sock: AsyncSocket) {.async.} =
           waitFor sock.sendText(getLatestResponse(), false)
         of RequestAll:
           echo "Received request of all blocks"
-          waitFor sock.sendText(getAllResponse(), false)
+          let response = newMessageBuilder()
+            .code(ResponseAll)
+            .blocks(manager.blocks)
+            .build()
+            .toJson()
+          waitFor sock.sendText(response, false)
         of ResponseAll:
           echo "Received all blocks"
           onReceivedAllResponse(msg.blocks)
