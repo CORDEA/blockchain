@@ -58,6 +58,7 @@ proc onReceivedLatestResponse(data: seq[Block]) =
     if latest.hash == data[0].previousHash:
       echo "Got the latest block"
       manager.blocks.add(data[0])
+      broadcast(getLatestResponse())
     else:
       broadcast(
         newMessageBuilder()
@@ -67,7 +68,8 @@ proc onReceivedLatestResponse(data: seq[Block]) =
       )
 
 proc onReceivedAllResponse(data: seq[Block]) =
-  manager.replace(data)
+  if manager.tryReplace(data):
+    broadcast(getLatestResponse())
 
 proc call(sock: AsyncSocket) {.async.} =
   await sock.sendText(getLatestRequest(), false)

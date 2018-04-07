@@ -49,7 +49,9 @@ proc add*(manager: var BlockManager, data: string): Block =
   )
   result = manager.add(newBlk)
 
-proc replace*(manager: var BlockManager, blks: seq[Block]) =
+proc tryReplace*(manager: var BlockManager, blks: seq[Block]): bool =
   if isValid(blks):
     if manager.blocks.len < blks.len:
       manager.blocks = blks
+      return true
+  return false
