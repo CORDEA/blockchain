@@ -23,6 +23,7 @@ import bblock
 import message
 import messagebuilder
 import blockmanager
+import times
 
 var manager* {.threadvar.}: BlockManager
 var clients {.threadvar.}: seq[AsyncSocket]
@@ -33,12 +34,16 @@ const
   RequestLatest = "requestlatest"
   ResponseLatest = "responselatest"
 
+proc log(log: string) =
+  echo "[", $epochTime(), "] ", log
+
 proc broadcast*(data: string) =
+  log "Broadcast to " & $clients.len & " clients"
   for client in clients:
     waitFor client.sendText(data, false)
 
 proc getLatestRequest*(): string =
-  echo "Request latest block"
+  log "Request latest block"
   result = newMessageBuilder()
     .code(RequestLatest)
     .build()
@@ -56,7 +61,7 @@ proc onReceivedLatestResponse(data: seq[Block]) =
   let latest = manager.latestBlock()
   if latest.depth < data[0].depth:
     if latest.hash == data[0].previousHash:
-      echo "Got the latest block"
+      log "Got the latest block"
       manager.blocks.add(data[0])
       broadcast(getLatestResponse())
     else:
@@ -80,10 +85,10 @@ proc call(sock: AsyncSocket) {.async.} =
         let msg = to[Message](f.data)
         case msg.code
         of RequestLatest:
-          echo "Received request of latest block"
+          log "Received request of latest block"
           waitFor sock.sendText(getLatestResponse(), false)
         of RequestAll:
-          echo "Received request of all blocks"
+          log "Received request of all blocks"
           let response = newMessageBuilder()
             .code(ResponseAll)
             .blocks(manager.blocks)
@@ -91,10 +96,10 @@ proc call(sock: AsyncSocket) {.async.} =
             .toJson()
           waitFor sock.sendText(response, false)
         of ResponseAll:
-          echo "Received all blocks"
+          log "Received all blocks"
           onReceivedAllResponse(msg.blocks)
         of ResponseLatest:
-          echo "Received latest block"
+          log "Received latest block"
           onReceivedLatestResponse(msg.blocks)
     except:
       echo getCurrentExceptionMsg()
@@ -102,7 +107,7 @@ proc call(sock: AsyncSocket) {.async.} =
       break
 
 proc connect*(address: string, number: int) {.async.} =
-  echo "Connect to " & address
+  log "Connect to " & address
   let ws = await newAsyncWebsocket(address, Port number, "/?encoding=text", ssl = false)
   clients.add(ws.sock)
   asyncCheck call(ws.sock)
@@ -110,7 +115,7 @@ proc connect*(address: string, number: int) {.async.} =
 proc initWs*(number: int) {.async.} =
   clients = @[]
   proc cb(req: Request) {.async.} =
-    let (success, error) = await verifyWebsocketRequest(req)
+    let (success, _) = await verifyWebsocketRequest(req)
     if success:
       clients.add(req.client)
       asyncCheck call(req.client)
