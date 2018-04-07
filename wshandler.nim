@@ -72,7 +72,7 @@ proc onReceivedAllResponse(data: seq[Block]) =
     broadcast(getLatestResponse())
 
 proc call(sock: AsyncSocket) {.async.} =
-  await sock.sendText(getLatestRequest(), false)
+  waitFor sock.sendText(getLatestRequest(), false)
   while true:
     try:
       let f = await sock.readData(false)
