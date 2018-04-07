@@ -38,14 +38,13 @@ proc broadcast*(data: string) =
     waitFor client.sendText(data, false)
 
 proc getLatestRequest*(): string =
-  echo "Request all blocks"
+  echo "Request latest block"
   result = newMessageBuilder()
     .code(RequestLatest)
     .build()
     .toJson()
 
 proc getLatestResponse*(): string =
-  echo "Request latest block"
   let latest = manager.latestBlock()
   result = newMessageBuilder()
     .code(ResponseLatest)
